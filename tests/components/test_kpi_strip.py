@@ -2,8 +2,19 @@
 
 from __future__ import annotations
 
+import pytest
+
 from src.components.kpi_strip import kpi_strip
 from src.data.models import KpiData
+
+_EXPECTED_CARD_IDS = [
+    "kpi-card-total",
+    "kpi-card-active_open",
+    "kpi-card-vendor_queue",
+    "kpi-card-unassigned",
+    "kpi-card-misclassified",
+    "kpi-card-auto_resolve_fail",
+]
 
 
 def _make_kpi(**overrides: object) -> KpiData:
@@ -31,20 +42,41 @@ class TestKpiStrip:
 
     def test_contains_six_cards(self) -> None:
         component = kpi_strip(_make_kpi())
-        # Children are the 6 KPI card columns; check there are 6 by
-        # inspecting the outer row's children length.
         assert len(component.children) == 6
 
     def test_total_value_present(self) -> None:
-        import json
-
         component = kpi_strip(_make_kpi(total=9999))
-        serialized = json.dumps(component.to_plotly_json())
+        serialized = str(component.to_plotly_json())
         assert "9999" in serialized or "9,999" in serialized
 
     def test_active_pct_rendered(self) -> None:
-        import json
-
         component = kpi_strip(_make_kpi(active_pct=63.2))
-        serialized = json.dumps(component.to_plotly_json())
+        serialized = str(component.to_plotly_json())
         assert "63.2" in serialized
+
+    def test_all_cards_have_ids(self) -> None:
+        component = kpi_strip(_make_kpi())
+        card_ids = [card.id for card in component.children]
+        assert card_ids == _EXPECTED_CARD_IDS
+
+    def test_all_cards_have_n_clicks(self) -> None:
+        component = kpi_strip(_make_kpi())
+        for card in component.children:
+            assert hasattr(card, "n_clicks"), f"Card {card.id} missing n_clicks"
+            assert card.n_clicks == 0
+
+    def test_cards_have_cursor_pointer(self) -> None:
+        component = kpi_strip(_make_kpi())
+        for card in component.children:
+            assert card.style.get("cursor") == "pointer", f"Card {card.id} missing cursor:pointer"
+
+    @pytest.mark.parametrize("card_id", _EXPECTED_CARD_IDS)
+    def test_each_expected_card_id_present(self, card_id: str) -> None:
+        component = kpi_strip(_make_kpi())
+        ids = [c.id for c in component.children]
+        assert card_id in ids
+
+    def test_drill_hint_text_present(self) -> None:
+        component = kpi_strip(_make_kpi())
+        serialized = str(component.to_plotly_json())
+        assert "click to view" in serialized

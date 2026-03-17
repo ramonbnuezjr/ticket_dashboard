@@ -6,9 +6,19 @@ from typing import Any
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import Input, Output, html
+from dash import Input, Output, State, dash_table, dcc, html
 
-from src.components import COLOR_BG, COLOR_SURFACE, COLOR_TEXT_MUTED, COLOR_TEXT_PRIMARY
+from src.components import (
+    COLOR_BG,
+    COLOR_BORDER,
+    COLOR_CRITICAL,
+    COLOR_MONITOR,
+    COLOR_SURFACE,
+    COLOR_SURFACE_2,
+    COLOR_TEXT_MUTED,
+    COLOR_TEXT_PRIMARY,
+    COLOR_WARNING,
+)
 from src.components.age_chart import age_chart
 from src.components.category_chart import category_chart
 from src.components.flagged_table import flagged_table
@@ -16,7 +26,7 @@ from src.components.heatmap import build_treemap_figure, heatmap_section
 from src.components.kpi_strip import kpi_strip
 from src.components.pattern_alerts import pattern_alerts
 from src.components.state_chart import state_chart
-from src.data.models import Ticket
+from src.data.models import Ticket, TicketCategory
 from src.data.transforms import (
     compute_age_distribution,
     compute_category_breakdown,
@@ -43,6 +53,169 @@ _SECTION_STYLE: dict[str, str] = {
     "padding": "16px 24px",
     "backgroundColor": COLOR_BG,
 }
+
+# ---------------------------------------------------------------------------
+# KPI drill-down — filter definitions
+# ---------------------------------------------------------------------------
+
+# Maps each card id suffix → display metadata + ticket filter predicate.
+# The filter lambda receives a single Ticket and returns True to include it.
+_KPI_FILTER_DEFS: dict[str, dict[str, Any]] = {
+    "total": {
+        "label": "All Incidents",
+        "sub": "Complete dataset",
+        "color": COLOR_TEXT_PRIMARY,
+        "filter": lambda t: True,
+    },
+    "active_open": {
+        "label": "Active Open",
+        "sub": "Not closed, resolved, or cancelled",
+        "color": COLOR_WARNING,
+        "filter": lambda t: t.is_active,
+    },
+    "vendor_queue": {
+        "label": "Vendor Queue",
+        "sub": "On Hold · NCT",
+        "color": COLOR_MONITOR,
+        "filter": lambda t: t.is_vendor_hold,
+    },
+    "unassigned": {
+        "label": "Unassigned",
+        "sub": "Active · no tech assigned",
+        "color": COLOR_CRITICAL,
+        "filter": lambda t: t.is_active and t.assigned_tech is None,
+    },
+    "misclassified": {
+        "label": "Misclassified",
+        "sub": "Wrong category for HW Repair queue",
+        "color": COLOR_WARNING,
+        "filter": lambda t: t.is_active
+        and t.category in TicketCategory.misrouted_categories(),
+    },
+    "auto_resolve_fail": {
+        "label": "Auto-Resolve Fail",
+        "sub": "3+ notifications · still open",
+        "color": COLOR_CRITICAL,
+        "filter": lambda t: t.is_active and t.notification_count >= 3,
+    },
+}
+
+_DRILL_COLUMNS = [
+    {"id": "number", "name": "Ticket #"},
+    {"id": "state", "name": "State"},
+    {"id": "age", "name": "Age (days)", "type": "numeric"},
+    {"id": "category", "name": "Category"},
+    {"id": "location", "name": "Location"},
+    {"id": "tech", "name": "Assigned Tech"},
+    {"id": "description", "name": "Description"},
+]
+
+_STATE_BADGE_CONDITIONS = [
+    {
+        "if": {"filter_query": '{state} = "OnHold"', "column_id": "state"},
+        "color": COLOR_MONITOR,
+        "fontWeight": "700",
+    },
+    {
+        "if": {"filter_query": '{state} = "Assigned"', "column_id": "state"},
+        "color": COLOR_WARNING,
+        "fontWeight": "700",
+    },
+    {
+        "if": {"filter_query": '{state} = "WorkInProgress"', "column_id": "state"},
+        "color": COLOR_CRITICAL,
+        "fontWeight": "700",
+    },
+    {
+        "if": {"filter_query": '{state} = "Resolved"', "column_id": "state"},
+        "color": "#22c55e",
+        "fontWeight": "700",
+    },
+    {
+        "if": {"filter_query": '{state} = "Closed"', "column_id": "state"},
+        "color": "#6b7280",
+    },
+    {
+        "if": {"filter_query": '{state} = "Cancelled"', "column_id": "state"},
+        "color": "#6b7280",
+    },
+]
+
+
+def _filter_tickets(tickets: list[Ticket], key: str) -> list[Ticket]:
+    """Return tickets matching the KPI filter identified by *key*."""
+    predicate = _KPI_FILTER_DEFS.get(key, {}).get("filter")
+    if predicate is None:
+        return []
+    return [t for t in tickets if predicate(t)]
+
+
+def _build_drill_table(tickets: list[Ticket], key: str) -> list[html.Div]:
+    """Build the DataTable rows for the drill-down panel."""
+    filtered = sorted(
+        _filter_tickets(tickets, key), key=lambda t: t.age_days, reverse=True
+    )
+    if not filtered:
+        return [
+            html.Div(
+                "No tickets match this filter.",
+                style={"color": COLOR_TEXT_MUTED, "fontSize": "13px", "padding": "8px 0"},
+            )
+        ]
+
+    rows = [
+        {
+            "number": t.number,
+            "state": t.state.value,
+            "age": t.age_days,
+            "category": t.category.value,
+            "location": t.location,
+            "tech": t.assigned_tech or "—",
+            "description": t.short_description or "—",
+        }
+        for t in filtered
+    ]
+
+    table = dash_table.DataTable(
+        id="kpi-drill-datatable",
+        columns=_DRILL_COLUMNS,
+        data=rows,
+        sort_action="native",
+        filter_action="native",
+        page_size=25,
+        style_as_list_view=False,
+        style_table={"overflowX": "auto"},
+        style_header={
+            "backgroundColor": COLOR_SURFACE_2,
+            "color": COLOR_TEXT_MUTED,
+            "fontWeight": "700",
+            "fontSize": "11px",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.06em",
+            "border": f"1px solid {COLOR_BORDER}",
+        },
+        style_cell={
+            "backgroundColor": COLOR_BG,
+            "color": COLOR_TEXT_PRIMARY,
+            "fontSize": "12px",
+            "padding": "10px 12px",
+            "border": f"1px solid {COLOR_BORDER}",
+            "textAlign": "left",
+            "whiteSpace": "normal",
+            "height": "auto",
+            "maxWidth": "280px",
+            "overflow": "hidden",
+            "textOverflow": "ellipsis",
+        },
+        style_data_conditional=_STATE_BADGE_CONDITIONS,
+        style_filter={
+            "backgroundColor": COLOR_SURFACE,
+            "color": COLOR_TEXT_PRIMARY,
+            "border": f"1px solid {COLOR_BORDER}",
+            "fontSize": "12px",
+        },
+    )
+    return [table]
 
 
 def _header(total: int) -> html.Div:
@@ -122,13 +295,62 @@ def create_app(tickets: list[Ticket]) -> dash.Dash:
                 children=[kpi_strip(kpi)],
             ),
 
-            # 3. State donut + monthly volume
+            # 3. KPI drill-down panel (hidden until a card is clicked)
+            dcc.Store(id="kpi-drill-store", data=None),
+            html.Div(
+                id="kpi-drill-wrapper",
+                style={"display": "none"},
+                children=[
+                    html.Div(
+                        style={
+                            **_SECTION_STYLE,
+                            "paddingTop": "12px",
+                            "paddingBottom": "16px",
+                            "borderTop": f"2px solid {COLOR_BORDER}",
+                            "borderBottom": f"1px solid {COLOR_BORDER}",
+                        },
+                        children=[
+                            # Panel header: label + count + close button
+                            html.Div(
+                                style={
+                                    "display": "flex",
+                                    "justifyContent": "space-between",
+                                    "alignItems": "center",
+                                    "marginBottom": "14px",
+                                },
+                                children=[
+                                    html.Div(id="kpi-drill-header"),
+                                    html.Button(
+                                        "✕",
+                                        id="kpi-drill-close",
+                                        n_clicks=0,
+                                        style={
+                                            "background": "none",
+                                            "border": f"1px solid {COLOR_BORDER}",
+                                            "borderRadius": "4px",
+                                            "color": COLOR_TEXT_MUTED,
+                                            "fontSize": "14px",
+                                            "cursor": "pointer",
+                                            "lineHeight": "1",
+                                            "padding": "4px 8px",
+                                        },
+                                    ),
+                                ],
+                            ),
+                            # DataTable content
+                            html.Div(id="kpi-drill-panel"),
+                        ],
+                    ),
+                ],
+            ),
+
+            # 4. State donut + monthly volume
             html.Div(
                 style=_SECTION_STYLE,
                 children=[state_chart(state_breakdown, monthly_volume)],
             ),
 
-            # 4. Age distribution + category breakdown
+            # 5. Age distribution + category breakdown
             html.Div(
                 style=_SECTION_STYLE,
                 children=[
@@ -142,16 +364,92 @@ def create_app(tickets: list[Ticket]) -> dash.Dash:
                 ],
             ),
 
-            # 5. Pattern alerts
+            # 6. Pattern alerts
             html.Div(style=_SECTION_STYLE, children=[pattern_alerts(alerts)]),
 
-            # 6. Flagged tickets table
+            # 7. Flagged tickets table
             html.Div(style=_SECTION_STYLE, children=[flagged_table(flagged)]),
 
-            # 7. Heat map
+            # 8. Heat map
             html.Div(style=_SECTION_STYLE, children=[heatmap_section(locations)]),
         ],
     )
+
+    # -----------------------------------------------------------------------
+    # Callback: KPI card drill-down
+    # -----------------------------------------------------------------------
+
+    @app.callback(
+        Output("kpi-drill-store", "data"),
+        Output("kpi-drill-wrapper", "style"),
+        Output("kpi-drill-header", "children"),
+        Output("kpi-drill-panel", "children"),
+        Input("kpi-card-total", "n_clicks"),
+        Input("kpi-card-active_open", "n_clicks"),
+        Input("kpi-card-vendor_queue", "n_clicks"),
+        Input("kpi-card-unassigned", "n_clicks"),
+        Input("kpi-card-misclassified", "n_clicks"),
+        Input("kpi-card-auto_resolve_fail", "n_clicks"),
+        Input("kpi-drill-close", "n_clicks"),
+        State("kpi-drill-store", "data"),
+        prevent_initial_call=True,
+    )
+    def _kpi_drill(
+        _n_total: int,
+        _n_active: int,
+        _n_vendor: int,
+        _n_unassigned: int,
+        _n_misclass: int,
+        _n_auto: int,
+        _n_close: int,
+        current_filter: str | None,
+    ) -> tuple[str | None, dict[str, str], list[Any], list[Any]]:
+        """Open or close the KPI drill-down panel based on which card was clicked."""
+        from dash import ctx
+
+        _hidden = {"display": "none"}
+        triggered = ctx.triggered_id
+
+        # Close button or unknown trigger → dismiss panel
+        if triggered is None or triggered == "kpi-drill-close":
+            return None, _hidden, [], []
+
+        filter_key = str(triggered).replace("kpi-card-", "")
+
+        # Toggle: clicking the active card again dismisses the panel
+        if current_filter == filter_key:
+            return None, _hidden, [], []
+
+        # Build header
+        meta = _KPI_FILTER_DEFS[filter_key]
+        filtered_count = len(_filter_tickets(tickets, filter_key))
+        header = [
+            html.Span(
+                meta["label"],
+                style={
+                    "fontWeight": "700",
+                    "fontSize": "15px",
+                    "color": meta["color"],
+                    "marginRight": "10px",
+                },
+            ),
+            html.Span(
+                f"{filtered_count:,} tickets",
+                style={
+                    "fontSize": "13px",
+                    "fontWeight": "600",
+                    "color": COLOR_TEXT_PRIMARY,
+                    "marginRight": "8px",
+                },
+            ),
+            html.Span(
+                f"· {meta['sub']}",
+                style={"fontSize": "12px", "color": COLOR_TEXT_MUTED},
+            ),
+        ]
+
+        table_children = _build_drill_table(tickets, filter_key)
+        return filter_key, {"display": "block"}, header, table_children
 
     # -----------------------------------------------------------------------
     # Callback: heat map metric toggle
