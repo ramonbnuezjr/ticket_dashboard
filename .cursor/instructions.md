@@ -44,8 +44,8 @@ dataset or a real ServiceNow CSV export specified via `DATA_CSV_PATH` in `.env`.
 - Pydantic v2 for all data validation
 - pydantic-settings for environment config
 - structlog for structured logging
-- Anthropic SDK / OpenAI SDK (pre-wired, not active in v0.1)
-- MCP (Model Context Protocol — pre-wired, not active in v0.1)
+- Anthropic SDK 0.85.0 / OpenAI SDK 1.35.0 (pre-wired, not active in v0.1)
+- MCP 1.9.4 (Model Context Protocol — pre-wired, not active in v0.1)
 
 ## How Cursor Should Behave
 

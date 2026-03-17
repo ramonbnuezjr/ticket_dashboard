@@ -2,6 +2,20 @@
 
 ## [Unreleased]
 
+## v0.1.2 — Dependency fixes + environment setup
+
+- Added `[tool.hatch.build.targets.wheel] packages = ["src"]` to `pyproject.toml` so
+  hatchling can locate the `src/` layout during editable install
+- Resolved cascading dependency conflicts caused by `mcp 1.0.0`:
+  - `mcp` 1.0.0 → 1.9.4
+  - `anyio` 4.4.0 → 4.9.0 (mcp 1.9.4 requires ≥4.6)
+  - `anthropic` 0.28.0 → 0.85.0 (latest stable)
+  - `pydantic-settings` 2.3.4 → 2.5.2 (mcp 1.9.4 minimum)
+- Created `data/` directory for local ServiceNow CSV placement (git-ignored)
+- Updated `.gitignore` to ignore entire `data/` directory (replaces per-extension rules)
+- Confirmed first successful run: `python -m src.main` serves at http://localhost:8050
+- README updated: `python3.11` venv creation, `data/` folder usage in CSV loading guide
+
 ## v0.1.1 — ServiceNow CSV column mapping
 
 - Updated `src/data/loader.py` to map all 31 real ServiceNow export columns to the

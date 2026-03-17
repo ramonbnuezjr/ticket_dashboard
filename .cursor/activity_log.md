@@ -2,6 +2,19 @@
 
 ## Entries
 
+### 2026-03-16 — Environment setup + dependency fixes (session 4)
+
+- Mode: PRODUCTION
+- Resolved `No module named 'structlog'`: created `.venv` with Python 3.11 (Homebrew
+  `/opt/homebrew/bin/python3.11`); system `python` resolves to 3.9 on macOS
+- Fixed `pyproject.toml`: added `[tool.hatch.build.targets.wheel]` (hatchling src layout)
+- Resolved pip dependency conflict chain: mcp 1.0.0→1.9.4, anyio 4.4.0→4.9.0,
+  anthropic 0.28.0→0.85.0, pydantic-settings 2.3.4→2.5.2
+- Created `data/` directory (git-ignored) for local ServiceNow CSV storage
+- Updated `.gitignore`: replaced per-extension data rules with single `data/` entry
+- Confirmed dashboard runs: HTTP 200 at http://localhost:8050 with mock data (1,102 tickets)
+- Updated documentation: README (venv command, data/ CSV guide), changelog (v0.1.2)
+
 ### 2026-03-16 — Documentation update (session 3)
 
 - Mode: PRODUCTION

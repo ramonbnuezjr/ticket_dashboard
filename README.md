@@ -39,7 +39,8 @@ git clone https://github.com/ramonbnuezjr/ticket_dashboard.git
 cd ticket_dashboard
 
 # Create and activate a virtual environment
-python -m venv .venv && source .venv/bin/activate
+# macOS ships Python 3.9 — use the Homebrew 3.11 binary explicitly
+python3.11 -m venv .venv && source .venv/bin/activate
 
 # Install the package with dev dependencies
 pip install -e ".[dev]"
@@ -69,10 +70,16 @@ The dashboard loads from seeded mock data (1,102 tickets, exact KPI targets) unl
 
 ## Loading real ServiceNow data
 
-Export your incident list from ServiceNow and set the path in `.env`:
+Export your incident list from ServiceNow, place the file in the `data/` folder
+(git-ignored — nothing in that folder will ever be committed), then set the path in `.env`:
+
+```bash
+# Recommended — keeps the file inside the project but out of git
+cp /path/to/export.csv data/export.csv
+```
 
 ```dotenv
-DATA_CSV_PATH=/absolute/path/to/servicenow_export.csv
+DATA_CSV_PATH=/absolute/path/to/ticket_dashboard/data/export.csv
 ```
 
 The loader auto-detects comma or tab delimiters. Required CSV columns (from a standard
