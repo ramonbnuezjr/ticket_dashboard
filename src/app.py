@@ -20,6 +20,7 @@ from src.components import (
     COLOR_WARNING,
 )
 from src.components.age_chart import age_chart
+from src.components.ai_patterns import ai_pattern_section, render_ai_results
 from src.components.category_chart import category_chart
 from src.components.flagged_table import flagged_table
 from src.components.heatmap import build_treemap_figure, heatmap_section
@@ -257,11 +258,13 @@ def _header(total: int) -> html.Div:
     )
 
 
-def create_app(tickets: list[Ticket]) -> dash.Dash:
+def create_app(tickets: list[Ticket], api_key: str | None = None) -> dash.Dash:
     """Build and return the configured Dash application.
 
     Args:
         tickets: Full ticket list from get_tickets().
+        api_key: Anthropic API key. When provided, the AI Pattern Discovery
+                 section is enabled. When None, the button is disabled.
 
     Returns:
         A Dash app instance ready for app.run().
@@ -367,10 +370,17 @@ def create_app(tickets: list[Ticket]) -> dash.Dash:
             # 6. Pattern alerts
             html.Div(style=_SECTION_STYLE, children=[pattern_alerts(alerts)]),
 
-            # 7. Flagged tickets table
+            # 7. AI-discovered patterns
+            dcc.Store(id="ai-patterns-store", storage_type="session"),
+            html.Div(
+                style={**_SECTION_STYLE, "borderTop": f"1px solid {COLOR_BORDER}"},
+                children=[ai_pattern_section(has_key=bool(api_key))],
+            ),
+
+            # 9. Flagged tickets table
             html.Div(style=_SECTION_STYLE, children=[flagged_table(flagged)]),
 
-            # 8. Heat map
+            # 10. Heat map
             html.Div(style=_SECTION_STYLE, children=[heatmap_section(locations)]),
         ],
     )
@@ -450,6 +460,72 @@ def create_app(tickets: list[Ticket]) -> dash.Dash:
 
         table_children = _build_drill_table(tickets, filter_key)
         return filter_key, {"display": "block"}, header, table_children
+
+    # -----------------------------------------------------------------------
+    # Callback: AI Pattern Discovery
+    # -----------------------------------------------------------------------
+
+    @app.callback(
+        Output("ai-pattern-results", "children"),
+        Output("ai-patterns-store", "data"),
+        Input("ai-run-btn", "n_clicks"),
+        State("ai-patterns-store", "data"),
+        prevent_initial_call=True,
+    )
+    def _ai_patterns(
+        n_clicks: int,
+        cached: list[dict] | None,
+    ) -> tuple[list, list[dict] | None]:
+        """Run AI pattern discovery or return cached results."""
+        from src.ai.analyzer import discover_patterns
+        from src.data.models import AlertSeverity, PatternAlert
+
+        if not api_key:
+            return (
+                [html.Div(
+                    "ANTHROPIC_API_KEY is not set. Add it to .env and restart.",
+                    style={"color": "#e74c3c", "fontSize": "13px"},
+                )],
+                None,
+            )
+
+        # Return cached results without re-calling the API
+        if cached:
+            patterns = [
+                PatternAlert(
+                    severity=AlertSeverity(item["severity"]),
+                    title=item["title"],
+                    description=item["description"],
+                    count=item["count"],
+                )
+                for item in cached
+            ]
+            return render_ai_results(patterns), cached
+
+        try:
+            patterns = discover_patterns(tickets, api_key)
+        except Exception as exc:  # noqa: BLE001
+            error_msg = str(exc)[:200]
+            return (
+                [html.Div(
+                    f"Analysis failed: {error_msg}",
+                    style={"color": "#e74c3c", "fontSize": "13px"},
+                )],
+                None,
+            )
+
+        # Serialise to plain dicts for dcc.Store (Pydantic models not JSON-serialisable)
+        cache_data = [
+            {
+                "severity": p.severity.value,
+                "title": p.title,
+                "description": p.description,
+                "count": p.count,
+            }
+            for p in patterns
+        ]
+
+        return render_ai_results(patterns), cache_data
 
     # -----------------------------------------------------------------------
     # Callback: heat map metric toggle

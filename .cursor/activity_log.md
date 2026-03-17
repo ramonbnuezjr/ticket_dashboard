@@ -2,6 +2,21 @@
 
 ## Entries
 
+### 2026-03-17 — AI pattern discovery via Anthropic Claude (session 7)
+
+- Mode: PRODUCTION
+- Created `src/ai/` package with `discover_patterns()` using `claude-sonnet-4-20250514`
+- Structured prompt returns JSON array of patterns not already covered by the 6 hardcoded
+  alerts; capped at 200 active tickets, 200-char description truncation for token budget
+- New `src/components/ai_patterns.py`: "Run Analysis" button, `dcc.Loading` spinner,
+  session-cached results; gracefully disabled when `ANTHROPIC_API_KEY` is absent
+- Wired into `src/app.py` via `dcc.Store(id="ai-patterns-store", storage_type="session")`
+  and `_ai_patterns` callback
+- `src/config.py` now exposes `anthropic_api_key` field; `src/main.py` passes it to `create_app`
+- Fixed structlog vs standard-logging mismatch in `analyzer.py` (keyword args)
+- 34 new unit tests across `tests/test_ai_analyzer.py` and `tests/components/test_ai_patterns.py`;
+  all 34 pass; Anthropic API fully mocked
+
 ### 2026-03-17 — Real CSV compatibility fixes (session 6)
 
 - Mode: PRODUCTION

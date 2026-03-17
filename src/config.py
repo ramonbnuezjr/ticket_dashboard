@@ -28,6 +28,12 @@ class Settings(BaseSettings):
         description="Absolute path to ServiceNow CSV export. Uses mock data if unset.",
     )
 
+    # AI / LLM
+    anthropic_api_key: Optional[str] = Field(
+        default=None,
+        description="Anthropic API key (sk-ant-...). Required for AI Pattern Discovery.",
+    )
+
     # Runtime
     environment: str = Field(
         default="local",

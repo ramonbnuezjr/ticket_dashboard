@@ -2,6 +2,32 @@
 
 ## [Unreleased]
 
+## v0.1.5 — AI-powered pattern discovery via Anthropic Claude
+
+- `src/ai/__init__.py` + `src/ai/analyzer.py`: new module; `discover_patterns(tickets,
+  api_key)` sends structured prompt to `claude-sonnet-4-20250514`, parses JSON
+  response into `PatternAlert` objects; handles malformed JSON gracefully; filters
+  to active tickets and caps at 200 to stay within token budget
+- `src/components/ai_patterns.py`: new component; `ai_pattern_section(has_key)` renders
+  "Run Analysis" button (disabled when `ANTHROPIC_API_KEY` absent), `dcc.Loading`
+  spinner, and results container; `ai_pattern_card` reuses existing pattern-alert
+  visual style; `render_ai_results` packs cards into rows of three
+- `src/app.py`: added `dcc.Store(id="ai-patterns-store", storage_type="session")` +
+  `_ai_patterns` callback; results cached for the browser session to avoid redundant
+  API calls
+- `src/config.py`: added `anthropic_api_key: Optional[str]` field; Settings now reads
+  `ANTHROPIC_API_KEY` from `.env`
+- `src/main.py`: passes `api_key=settings.anthropic_api_key` to `create_app`; logs
+  whether AI discovery is enabled or disabled at startup
+- `.env.example`: clarified `ANTHROPIC_API_KEY` usage note
+- `tests/test_ai_analyzer.py`: 19 unit tests covering `_build_user_message`,
+  `_parse_response`, `_to_pattern_alert`, and `discover_patterns` (Anthropic API
+  fully mocked)
+- `tests/components/test_ai_patterns.py`: 15 unit tests covering component rendering,
+  button state, loading wrapper, and result layout for 1–7 alerts
+- Fixed `src/ai/analyzer.py`: switched from `logging.getLogger` to `structlog.get_logger`
+  so keyword-argument log calls (`error=`, `raw=`) work correctly
+
 ## v0.1.4 — Real CSV compatibility fixes
 
 - `src/data/loader.py`: encoding auto-detection added — tries `utf-8-sig` first,

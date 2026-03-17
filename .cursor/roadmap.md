@@ -15,6 +15,7 @@
 - [x] Initial commit pushed to https://github.com/ramonbnuezjr/ticket_dashboard
 - [x] Interactive KPI cards with drill-down ticket panel (`dcc.Store` + callback)
 - [x] Real CSV compatibility: Windows-1252 encoding, MM-DD-YYYY date format
+- [x] AI-powered pattern discovery via Anthropic Claude (`src/ai/analyzer.py`)
 - [ ] ≥1 passing end-to-end integration test
 - [ ] GPIO abstraction layer (hardware-conditional) — deferred to v0.2
 
