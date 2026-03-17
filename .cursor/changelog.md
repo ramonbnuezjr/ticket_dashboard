@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## v0.1.6 — Dynamic export date + new CSV import
+
+- `src/app.py`: `_header` now accepts `export_date: str` as an explicit parameter
+  instead of reading a module-level constant; `create_app` accepts
+  `csv_path: Path | str | None` and derives the export date from the CSV file's
+  modification timestamp via `os.path.getmtime`; falls back to latest ticket date
+  if no path is provided, or "unknown" for mock data
+- `src/main.py`: passes `csv_path=settings.data_csv_path` to `create_app`
+- Added `import datetime`, `import os`, `from pathlib import Path` to `src/app.py`
+- New CSV loaded: `Incidents - ITS Service Desk Hardware Repair.csv` (86 tickets,
+  Jan 2025 – Mar 2026, exported Mar 17 2026); `DATA_CSV_PATH` updated in `.env`
+- Documentation updated: README (AI section, dynamic export date, updated structure),
+  PRD (user flow step 10, success criteria), instructions.md (AI feature active,
+  dynamic export date), architecture.md (mermaid diagram, AI layer, constraints),
+  roadmap.md (dynamic export date ticked), changelog, activity_log
+
 ## v0.1.5 — AI-powered pattern discovery via Anthropic Claude
 
 - `src/ai/__init__.py` + `src/ai/analyzer.py`: new module; `discover_patterns(tickets,

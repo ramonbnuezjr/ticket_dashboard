@@ -21,6 +21,7 @@ that reproduces the exact KPIs from the source analysis.
 | **Pattern alerts** | Six severity-coded operational flags (CRITICAL / WARNING / MONITOR / IMMEDIATE) |
 | **Flagged tickets** | Immediate-action table: ticket number, state, age, pattern, issue summary, owner |
 | **Location heat map** | Treemap by building; toggle between % active open, avg age, on hold count |
+| **AI Pattern Discovery** | Claude-powered analysis of active tickets — surfaces new operational patterns beyond the six hardcoded alerts; requires `ANTHROPIC_API_KEY` |
 
 ---
 
@@ -86,6 +87,9 @@ The loader auto-detects comma or tab delimiters and handles both UTF-8 and
 Windows-1252 encoding (standard Excel exports work without any conversion).
 `opened_at` accepts multiple date formats including `MM-DD-YYYY HH:MM:SS`.
 
+The **export date** shown in the dashboard header is derived automatically from the
+CSV file's modification timestamp — it updates every time you swap in a new file.
+
 Required CSV columns (from a standard ServiceNow incident export):
 
 | Column | Used for |
@@ -100,10 +104,30 @@ Required CSV columns (from a standard ServiceNow incident export):
 | `u_notification_counter` | Auto-resolve notification count |
 | `hold_reason` | Vendor/NCT hold detection |
 | `u_escalation_status` | Leadership escalation flag (non-empty, non-"Normal" → flagged) |
-| `short_description` | Ticket summary (shown in flagged table) |
+| `short_description` | Ticket summary (shown in flagged table and sent to AI) |
 | `calendar_stc` | Fallback age (seconds) when `opened_at` is missing |
 
 All other export columns are accepted and silently ignored.
+
+---
+
+## AI Pattern Discovery
+
+The dashboard includes an optional AI analysis section powered by **Anthropic Claude**
+(`claude-sonnet-4-20250514`). When enabled, clicking "Run Analysis" sends the active
+ticket list to Claude and surfaces patterns that go beyond the six hardcoded operational
+alerts.
+
+To enable:
+
+```dotenv
+# .env
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Results are cached for the browser session — Claude is only called once per page load.
+The feature degrades gracefully: the button is disabled and a setup notice is shown when
+the key is absent.
 
 ---
 
@@ -123,6 +147,7 @@ tests/
 ├── test_models.py
 ├── test_transforms.py
 ├── test_loader.py
+├── test_ai_analyzer.py
 └── components/
     ├── test_kpi_strip.py
     ├── test_state_chart.py
@@ -130,7 +155,8 @@ tests/
     ├── test_category_chart.py
     ├── test_pattern_alerts.py
     ├── test_flagged_table.py
-    └── test_heatmap.py
+    ├── test_heatmap.py
+    └── test_ai_patterns.py
 ```
 
 ---
@@ -146,6 +172,7 @@ See `.env.example` for the full list with descriptions. Key variables:
 | `LOG_LEVEL` | `INFO` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
 | `DASHBOARD_HOST` | `0.0.0.0` | Bind host for the Dash server |
 | `DASHBOARD_PORT` | `8050` | Bind port for the Dash server |
+| `ANTHROPIC_API_KEY` | _(unset)_ | Enables AI Pattern Discovery. Get one at console.anthropic.com |
 
 ---
 
@@ -155,19 +182,23 @@ See `.env.example` for the full list with descriptions. Key variables:
 src/
 ├── config.py          pydantic-settings — all runtime config
 ├── main.py            entrypoint
-├── app.py             Dash app factory + heat map callback
+├── app.py             Dash app factory + all callbacks
+├── ai/
+│   ├── __init__.py
+│   └── analyzer.py    Claude-powered pattern discovery
 ├── data/
 │   ├── models.py      Pydantic: Ticket, KpiData, PatternAlert, FlaggedTicket
 │   ├── transforms.py  8 pure compute functions (no I/O)
 │   └── loader.py      mock data generator + ServiceNow CSV parser
-└── components/        7 presentational Dash components
+└── components/        presentational Dash components
     ├── kpi_strip.py
     ├── state_chart.py
     ├── age_chart.py
     ├── category_chart.py
     ├── pattern_alerts.py
     ├── flagged_table.py
-    └── heatmap.py
+    ├── heatmap.py
+    └── ai_patterns.py
 ```
 
 ---

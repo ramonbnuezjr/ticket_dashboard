@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import datetime
+import os
+from pathlib import Path
 from typing import Any
 
 import dash
@@ -39,7 +42,6 @@ from src.data.transforms import (
     compute_state_breakdown,
 )
 
-_EXPORT_DATE = "Mar 16, 2026"
 
 _HEADER_STYLE: dict[str, str] = {
     "backgroundColor": COLOR_SURFACE,
@@ -219,7 +221,7 @@ def _build_drill_table(tickets: list[Ticket], key: str) -> list[html.Div]:
     return [table]
 
 
-def _header(total: int) -> html.Div:
+def _header(total: int, export_date: str) -> html.Div:
     return html.Div(
         style=_HEADER_STYLE,
         children=[
@@ -251,24 +253,39 @@ def _header(total: int) -> html.Div:
             ),
             html.Div(
                 f"Assignment group: ITS Service Desk Hardware Repair · "
-                f"{total:,} incidents · export date {_EXPORT_DATE}",
+                f"{total:,} incidents · export date {export_date}",
                 style={"fontSize": "12px", "color": COLOR_TEXT_MUTED},
             ),
         ],
     )
 
 
-def create_app(tickets: list[Ticket], api_key: str | None = None) -> dash.Dash:
+def create_app(
+    tickets: list[Ticket],
+    api_key: str | None = None,
+    csv_path: Path | str | None = None,
+) -> dash.Dash:
     """Build and return the configured Dash application.
 
     Args:
         tickets: Full ticket list from get_tickets().
         api_key: Anthropic API key. When provided, the AI Pattern Discovery
                  section is enabled. When None, the button is disabled.
+        csv_path: Path to the source CSV file; used to derive the export date
+                  from the file's modification timestamp.
 
     Returns:
         A Dash app instance ready for app.run().
     """
+    # Derive export date from the CSV file's modification timestamp (= when it was
+    # pulled from ServiceNow), falling back to the latest ticket date if unavailable.
+    if csv_path and Path(csv_path).exists():
+        export_date = datetime.datetime.fromtimestamp(os.path.getmtime(Path(csv_path))).strftime("%b %-d, %Y")
+    elif tickets:
+        export_date = max(t.created_date for t in tickets).strftime("%b %-d, %Y")
+    else:
+        export_date = "unknown"
+
     # Pre-compute all data once at startup — components are purely presentational.
     kpi = compute_kpis(tickets)
     state_breakdown = compute_state_breakdown(tickets)
@@ -290,7 +307,7 @@ def create_app(tickets: list[Ticket], api_key: str | None = None) -> dash.Dash:
         style={"backgroundColor": COLOR_BG, "minHeight": "100vh", "fontFamily": "'Inter', sans-serif"},
         children=[
             # 1. Header
-            _header(kpi.total),
+            _header(kpi.total, export_date),
 
             # 2. KPI strip
             html.Div(

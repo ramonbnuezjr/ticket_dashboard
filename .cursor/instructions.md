@@ -30,6 +30,11 @@ dataset or a real ServiceNow CSV export specified via `DATA_CSV_PATH` in `.env`.
   below the strip; clicking the same card again or pressing ✕ dismisses the panel
 - **ServiceNow CSV loader** — 31-column real export schema; auto-detects delimiter,
   encoding (UTF-8 / Windows-1252), and `opened_at` date format
+- **AI Pattern Discovery** — `src/ai/analyzer.py`; calls `claude-sonnet-4-20250514` with
+  active tickets, parses JSON response into `PatternAlert` objects; session-cached;
+  gracefully disabled when `ANTHROPIC_API_KEY` is absent
+- **Dynamic export date** — derived from the CSV file's modification timestamp via
+  `os.path.getmtime`; always accurate after a CSV swap without code changes
 
 ## Non-Goals
 
@@ -47,7 +52,8 @@ dataset or a real ServiceNow CSV export specified via `DATA_CSV_PATH` in `.env`.
 - Pydantic v2 for all data validation
 - pydantic-settings for environment config
 - structlog for structured logging
-- Anthropic SDK 0.85.0 / OpenAI SDK 1.35.0 (pre-wired, not active in v0.1)
+- Anthropic SDK 0.85.0 — **active**: powers AI Pattern Discovery (`src/ai/analyzer.py`)
+- OpenAI SDK 1.35.0 (pre-wired, not active in v0.1)
 - MCP 1.9.4 (Model Context Protocol — pre-wired, not active in v0.1)
 
 ## How Cursor Should Behave

@@ -2,6 +2,23 @@
 
 ## Entries
 
+### 2026-03-17 — Dynamic export date + new CSV import (session 8)
+
+- Mode: PRODUCTION
+- Loaded new CSV: `Incidents - ITS Service Desk Hardware Repair.csv` — 86 tickets
+  spanning Jan 2025 – Mar 2026; `DATA_CSV_PATH` updated in `.env`
+- Replaced hardcoded `_EXPORT_DATE = "Mar 16, 2026"` constant with dynamic derivation
+  from the CSV file's modification timestamp (`os.path.getmtime`); export date in
+  the dashboard header now updates automatically whenever a new file is dropped in
+- Fixed `NameError: name 'export_date' is not defined` — `_header` was a module-level
+  function that couldn't see `create_app`'s local variable; fixed by adding
+  `export_date: str` as an explicit parameter
+- Fixed `AttributeError: 'str' object has no attribute 'exists'` — `settings.data_csv_path`
+  is a `str`; wrapped in `Path()` before calling `.exists()`
+- `create_app` signature updated: `csv_path: Path | str | None = None`
+- Updated all documentation: README, PRD, instructions.md, architecture.md,
+  roadmap.md, changelog.md
+
 ### 2026-03-17 — AI pattern discovery via Anthropic Claude (session 7)
 
 - Mode: PRODUCTION

@@ -20,7 +20,8 @@ signals from a standard ServiceNow CSV export or a reproducible mock dataset.
 ## Core User Flow
 
 1. Analyst runs `python -m src.main` and opens `http://localhost:8050`.
-2. The **KPI strip** gives a six-number status snapshot at a glance.
+2. The **KPI strip** gives a six-number status snapshot at a glance. Clicking any card
+   opens a filtered, sortable drill-down table showing the matching tickets.
 3. The **state donut** shows the distribution of active states; the monthly volume bar
    reveals whether incident intake is trending up or down.
 4. The **age distribution** chart uses a red→green gradient to make the 180+-day backlog
@@ -34,8 +35,14 @@ signals from a standard ServiceNow CSV export or a reproducible mock dataset.
 8. The **location heat map** (treemap with three-metric toggle) shows whether hardware
    failures are clustering geographically across Clermont, Garrison, Halsey, and other
    sites.
-9. Analyst loads a fresh ServiceNow export by updating `DATA_CSV_PATH` in `.env` and
-   restarting the server — no code changes required.
+9. Analyst optionally clicks **"Run Analysis"** in the AI Pattern Discovery section to
+   send active tickets to Claude and surface patterns beyond the six hardcoded alerts.
+   Results are cached for the session; the feature is disabled if `ANTHROPIC_API_KEY`
+   is not set.
+10. Analyst loads a fresh ServiceNow export by dropping a new CSV into `data/` and
+    updating `DATA_CSV_PATH` in `.env`, then restarting the server — no code changes
+    required. The export date in the header updates automatically from the file's
+    modification timestamp.
 
 ---
 
@@ -53,10 +60,15 @@ signals from a standard ServiceNow CSV export or a reproducible mock dataset.
 ## Success Criteria
 
 - [x] User can run `python -m src.main` and see a complete, meaningful dashboard at
-      `http://localhost:8050` with all seven sections rendered.
+      `http://localhost:8050` with all eight sections rendered.
 - [x] Configuration is loaded from `.env` and validated at startup via `pydantic-settings`.
 - [x] All core modules pass mypy strict; test suite runs with Black + Ruff + pytest-cov;
       TDD test files written before source for every component.
+- [x] Clicking any KPI card opens a drill-down panel with filtered, sortable tickets.
+- [x] AI Pattern Discovery section surfaces Claude-generated patterns when
+      `ANTHROPIC_API_KEY` is set; degrades gracefully when absent.
+- [x] Export date in the header is derived automatically from the CSV file's modification
+      timestamp — always accurate without manual updates.
 - [ ] ≥90% test coverage enforced by `--cov-fail-under=90` (v0.2 target).
 - [ ] Pre-commit hooks pass cleanly on every commit (v0.2 target).
 

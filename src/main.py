@@ -44,7 +44,7 @@ def main() -> None:
     else:
         log.info("ai_pattern_discovery_disabled", reason="ANTHROPIC_API_KEY not set")
 
-    app = create_app(tickets, api_key=settings.anthropic_api_key)
+    app = create_app(tickets, api_key=settings.anthropic_api_key, csv_path=settings.data_csv_path)
 
     app.run(
         host=settings.dashboard_host,
