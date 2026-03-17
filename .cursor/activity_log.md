@@ -2,6 +2,29 @@
 
 ## Entries
 
+### 2026-03-17 — Real CSV compatibility fixes (session 6)
+
+- Mode: PRODUCTION
+- Fixed `UnicodeDecodeError`: loader now auto-detects encoding (utf-8-sig → cp1252
+  → latin-1); real CSV is Windows-1252 (Excel export with byte 0x96 en-dash)
+- Fixed monthly volume showing all 660 tickets in March 2026: `opened_at` in this
+  CSV uses `MM-DD-YYYY HH:MM:SS` format not previously in `_SN_DATETIME_FORMATS`
+- Fixed `ValidationError: Extra inputs are not permitted` at startup: added
+  `extra="ignore"` to `Settings` model_config in `src/config.py`
+- Created `.env` (git-ignored) with `DATA_CSV_PATH` pointing to real export
+- Confirmed 660 tickets loaded across 18 months (Aug 2024 – Mar 2026)
+
+### 2026-03-17 — Interactive KPI drill-down (session 5)
+
+- Mode: PRODUCTION
+- Made all 6 KPI cards clickable: `n_clicks=0`, `id="kpi-card-{key}"`,
+  `cursor: pointer`, "click to view ↓" hint text
+- Added drill-down panel below KPI strip: `dcc.Store`, `_kpi_drill` callback,
+  filterable/sortable `DataTable` with state-coloured rows, ✕ close button
+- Toggle behaviour: clicking the active card again dismisses the panel
+- Updated `tests/components/test_kpi_strip.py`: 10 new assertions, fixed
+  `json.dumps → str()` for `to_plotly_json` serialisation
+
 ### 2026-03-16 — Environment setup + dependency fixes (session 4)
 
 - Mode: PRODUCTION

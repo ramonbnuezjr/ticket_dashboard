@@ -26,7 +26,10 @@ dataset or a real ServiceNow CSV export specified via `DATA_CSV_PATH` in `.env`.
   MONITOR / IMMEDIATE)
 - **Flagged tickets table** — DataTable with state-conditional row colouring
 - **Location heat map** — treemap with three-metric toggle (% active, avg age, on hold)
-- **ServiceNow CSV loader** — 31-column real export schema with auto-delimiter detection
+- **KPI card drill-down** — clicking any KPI card opens a filtered, sortable DataTable
+  below the strip; clicking the same card again or pressing ✕ dismisses the panel
+- **ServiceNow CSV loader** — 31-column real export schema; auto-detects delimiter,
+  encoding (UTF-8 / Windows-1252), and `opened_at` date format
 
 ## Non-Goals
 

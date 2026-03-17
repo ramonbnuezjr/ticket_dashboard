@@ -2,6 +2,34 @@
 
 ## [Unreleased]
 
+## v0.1.4 — Real CSV compatibility fixes
+
+- `src/data/loader.py`: encoding auto-detection added — tries `utf-8-sig` first,
+  then `cp1252` (Windows-1252 / Excel export), then `latin-1` fallback; previously
+  crashed with `UnicodeDecodeError` on byte `0x96` (Windows en-dash)
+- `src/data/loader.py`: added `MM-DD-YYYY HH:MM:SS` (`%m-%d-%Y %H:%M:%S`) and
+  related date-only variants to `_SN_DATETIME_FORMATS`; previously all tickets
+  fell back to `date.today()` so every ticket appeared in the current month
+- `src/config.py`: added `extra="ignore"` to `SettingsConfigDict` so pre-wired
+  env vars (`ANTHROPIC_MODEL`, `OPENAI_MODEL`, `GPIO_MODE`) don't raise
+  `ValidationError: Extra inputs are not permitted` at startup
+- `.env` created (git-ignored); `DATA_CSV_PATH` auto-resolved to correct filename
+
+## v0.1.3 — Interactive KPI cards with drill-down panel
+
+- `src/components/kpi_strip.py`: each card now has `id="kpi-card-{key}"`,
+  `n_clicks=0`, `cursor: pointer`, and a "click to view ↓" hint
+- `src/app.py`: added `dcc.Store` + drill-down wrapper panel below the KPI strip;
+  `_kpi_drill` callback handles all 6 card inputs and the ✕ close button; renders
+  a filterable, sortable `DataTable` with state-coloured rows sorted oldest-first
+- Filter mapping: Total → all, Active Open → `is_active`, Vendor Queue →
+  `is_vendor_hold`, Unassigned → `is_active and no tech`, Misclassified →
+  `is_active and misrouted_category`, Auto-Resolve Fail → `notification_count ≥ 3`
+- Clicking the same card a second time toggles the panel closed
+- `tests/components/test_kpi_strip.py`: 10 new assertions (card IDs, n_clicks,
+  cursor style, drill hint text); fixed `to_plotly_json` serialisation (`str()`
+  instead of `json.dumps()`)
+
 ## v0.1.2 — Dependency fixes + environment setup
 
 - Added `[tool.hatch.build.targets.wheel] packages = ["src"]` to `pyproject.toml` so

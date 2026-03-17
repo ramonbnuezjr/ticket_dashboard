@@ -30,7 +30,7 @@ legacy/
 .env
 
 # ServiceNow data exports — may contain PII; keep local only
-data/
+/data/
 
 # Dist / build artifacts
 *.so

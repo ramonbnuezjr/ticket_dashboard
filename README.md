@@ -13,7 +13,7 @@ that reproduces the exact KPIs from the source analysis.
 
 | Section | What it shows |
 |---|---|
-| **KPI strip** | Total, Active Open, Vendor Queue, Unassigned, Misclassified, Auto-Resolve Fail |
+| **KPI strip** | Total, Active Open, Vendor Queue, Unassigned, Misclassified, Auto-Resolve Fail — **click any card to drill into the matching tickets** |
 | **State donut** | Ticket state breakdown (Assigned / Closed / On Hold / WIP / Resolved / Cancelled) |
 | **Monthly volume** | Incident count by month — last 12 months |
 | **Age distribution** | Active ticket count by age bucket (0–30d → 365+d), red→green gradient |
@@ -82,8 +82,11 @@ cp /path/to/export.csv data/export.csv
 DATA_CSV_PATH=/absolute/path/to/ticket_dashboard/data/export.csv
 ```
 
-The loader auto-detects comma or tab delimiters. Required CSV columns (from a standard
-ServiceNow incident export):
+The loader auto-detects comma or tab delimiters and handles both UTF-8 and
+Windows-1252 encoding (standard Excel exports work without any conversion).
+`opened_at` accepts multiple date formats including `MM-DD-YYYY HH:MM:SS`.
+
+Required CSV columns (from a standard ServiceNow incident export):
 
 | Column | Used for |
 |---|---|

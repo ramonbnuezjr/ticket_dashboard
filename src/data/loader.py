@@ -626,10 +626,13 @@ def _reconcile(tickets: list[Ticket]) -> None:
 # ---------------------------------------------------------------------------
 
 _SN_DATETIME_FORMATS: list[str] = [
-    "%Y-%m-%d %H:%M:%S",
-    "%m/%d/%Y %H:%M:%S",
-    "%Y-%m-%dT%H:%M:%S",
-    "%Y-%m-%d",
+    "%Y-%m-%d %H:%M:%S",   # 2025-08-14 09:32:00  (standard SN export)
+    "%m/%d/%Y %H:%M:%S",   # 08/14/2025 09:32:00
+    "%m-%d-%Y %H:%M:%S",   # 08-14-2025 09:32:00  (this export's format)
+    "%Y-%m-%dT%H:%M:%S",   # 2025-08-14T09:32:00  (ISO 8601)
+    "%Y-%m-%d",            # 2025-08-14
+    "%m/%d/%Y",            # 08/14/2025
+    "%m-%d-%Y",            # 08-14-2025
 ]
 
 # ServiceNow state display labels and numeric codes → TicketState
@@ -818,7 +821,18 @@ def load_csv(path: str) -> list[Ticket]:
     today = date.today()
     tickets: list[Ticket] = []
 
-    with csv_path.open(newline="", encoding="utf-8-sig") as f:
+    # Auto-detect encoding: try UTF-8 (with BOM) first, then Windows-1252
+    # (Excel exports), then fall back to latin-1 which accepts every byte.
+    encoding = "latin-1"
+    for enc in ("utf-8-sig", "cp1252"):
+        try:
+            csv_path.read_text(encoding=enc)
+            encoding = enc
+            break
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    with csv_path.open(newline="", encoding=encoding) as f:
         reader = csv.DictReader(f, delimiter=delimiter)
         # Strip any BOM / whitespace from header names
         if reader.fieldnames:
