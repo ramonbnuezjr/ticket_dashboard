@@ -1,0 +1,1 @@
+"""Ticket dashboard application package."""
