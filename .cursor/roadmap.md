@@ -11,23 +11,25 @@
 - [x] Plotly Dash app assembly + heat map toggle callback (`src/app.py`)
 - [x] Entrypoint (`src/main.py`: `python -m src.main`)
 - [x] TDD test suite covering all core modules
-- [ ] GPIO abstraction layer (hardware-conditional) — deferred to v0.2
+- [x] ServiceNow CSV loader with full 31-column real export schema
+- [x] Initial commit pushed to https://github.com/ramonbnuezjr/ticket_dashboard
 - [ ] ≥1 passing end-to-end integration test
+- [ ] GPIO abstraction layer (hardware-conditional) — deferred to v0.2
 
 ## v0.2 — Hardening
 
-- [ ] Coverage ≥90% on all core modules (run `pytest`)
+- [ ] Coverage ≥90% on all core modules (`pytest --cov-fail-under=90`)
 - [ ] Pre-commit hooks passing cleanly
 - [ ] mypy strict passing cleanly
-- [ ] All secrets validated as present at startup
-- [ ] Structured logging wired throughout
+- [ ] All required secrets validated as present at startup
+- [ ] Structured logging wired throughout (structlog)
 - [ ] GPIO abstraction layer (hardware-conditional)
-- [ ] README complete and accurate
+- [x] README complete and accurate
 
 ## v1.0 — Production-Ready
 
-- [ ] Cloud deployment configuration (Dockerfile or equivalent) — none yet; target TBD
-- [ ] CI pipeline (GitHub Actions or equivalent)
+- [ ] Cloud deployment configuration (Dockerfile or equivalent) — target TBD
+- [ ] CI pipeline (GitHub Actions)
 - [ ] Security audit passing (bandit + pip-audit clean)
-- [ ] Full documentation in docs/
+- [ ] Full documentation in `docs/`
 - [ ] CHANGELOG reflects all meaningful changes
