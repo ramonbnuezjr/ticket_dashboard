@@ -286,6 +286,13 @@ def create_app(
     else:
         export_date = "unknown"
 
+    # Fingerprint the current dataset so cached AI results are invalidated when the
+    # CSV changes. Uses ticket count + latest opened_at date — cheap to compute.
+    _data_fingerprint = (
+        f"{len(tickets)}:{max((t.created_date.isoformat() for t in tickets), default='')}"
+        if tickets else "empty"
+    )
+
     # Pre-compute all data once at startup — components are purely presentational.
     kpi = compute_kpis(tickets)
     state_breakdown = compute_state_breakdown(tickets)
@@ -506,18 +513,22 @@ def create_app(
                 None,
             )
 
-        # Return cached results without re-calling the API
-        if cached:
-            patterns = [
-                PatternAlert(
-                    severity=AlertSeverity(item["severity"]),
-                    title=item["title"],
-                    description=item["description"],
-                    count=item["count"],
-                )
-                for item in cached
-            ]
-            return render_ai_results(patterns), cached
+        # Return cached results only if the dataset fingerprint still matches.
+        # If the CSV has been swapped since the last run, discard the stale cache.
+        if cached and isinstance(cached, list) and cached:
+            cached_fp = cached[0].get("_fingerprint") if isinstance(cached[0], dict) else None
+            if cached_fp == _data_fingerprint:
+                patterns = [
+                    PatternAlert(
+                        severity=AlertSeverity(item["severity"]),
+                        title=item["title"],
+                        description=item["description"],
+                        count=item["count"],
+                    )
+                    for item in cached
+                    if "_fingerprint" not in item
+                ]
+                return render_ai_results(patterns), cached
 
         try:
             patterns = discover_patterns(tickets, api_key)
@@ -531,8 +542,10 @@ def create_app(
                 None,
             )
 
-        # Serialise to plain dicts for dcc.Store (Pydantic models not JSON-serialisable)
-        cache_data = [
+        # Serialise to plain dicts for dcc.Store (Pydantic models not JSON-serialisable).
+        # Prepend a sentinel record carrying the fingerprint so the next click can
+        # verify the cache is still valid for the current dataset.
+        cache_data: list[dict] = [{"_fingerprint": _data_fingerprint}] + [
             {
                 "severity": p.severity.value,
                 "title": p.title,

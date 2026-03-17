@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## v0.1.7 — AI cache invalidation on CSV change
+
+- `src/app.py`: AI pattern cache now stores a dataset fingerprint
+  (`ticket_count:latest_opened_at`) alongside the cached results; on the next
+  "Run Analysis" click the fingerprint is compared against the live dataset —
+  if they differ (new CSV loaded) the cache is discarded and Claude is called
+  fresh; prevents stale results from a previous CSV surviving across a server restart
+- `src/app.py`: fingerprint sentinel is prepended as `{"_fingerprint": ...}` in the
+  `dcc.Store` list; pattern reconstruction skips the sentinel record when rebuilding
+  `PatternAlert` objects from a valid cache hit
+
 ## v0.1.6 — Dynamic export date + new CSV import
 
 - `src/app.py`: `_header` now accepts `export_date: str` as an explicit parameter

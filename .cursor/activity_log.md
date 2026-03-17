@@ -2,6 +2,17 @@
 
 ## Entries
 
+### 2026-03-17 — AI cache invalidation on CSV change (session 9)
+
+- Mode: PRODUCTION
+- Diagnosed stale AI results: `ai-patterns-store` (`storage_type="session"`) survived
+  across server restarts, so swapping the CSV did not trigger a fresh Claude call
+- Fixed by computing a dataset fingerprint (`ticket_count:latest_opened_at`) at
+  `create_app` startup and embedding it as a sentinel record in the `dcc.Store` cache
+- Cache hit path now checks `cached[0]["_fingerprint"] == _data_fingerprint`; mismatch
+  (new CSV) discards the cache and re-runs discovery against the current ticket list
+- Dashboard confirmed running at HTTP 200 with 86-ticket dataset after fix
+
 ### 2026-03-17 — Dynamic export date + new CSV import (session 8)
 
 - Mode: PRODUCTION
