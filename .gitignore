@@ -29,6 +29,9 @@ legacy/
 # Secrets — never commit the real .env
 .env
 
+# ServiceNow data exports — may contain PII; keep local only
+data/
+
 # Dist / build artifacts
 *.so
 *.dylib
